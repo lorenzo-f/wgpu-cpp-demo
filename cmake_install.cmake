@@ -1,8 +1,8 @@
-# Install script for directory: /home/runner/work/WebGPU4Edu/WebGPU4Edu/firstSteps/firstSteps
+# Install script for directory: /home/runner/work/WebGPU4Edu/WebGPU4Edu/blueprint/lighting
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/runner/work/_temp/7cf3296d-91bf-4e47-9336-4cf8c892bba9/emsdk-main/upstream/emscripten/cache/sysroot")
+  set(CMAKE_INSTALL_PREFIX "/home/runner/work/_temp/a6fed776-e1d6-4429-89c8-4b47faebe572/emsdk-main/upstream/emscripten/cache/sysroot")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -37,19 +37,9 @@ if(NOT DEFINED CMAKE_OBJDUMP)
   set(CMAKE_OBJDUMP "/usr/bin/objdump")
 endif()
 
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/home/runner/work/WebGPU4Edu/WebGPU4Edu/firstSteps/build-web/firstSteps/webgpu/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/home/runner/work/WebGPU4Edu/WebGPU4Edu/firstSteps/build-web/firstSteps/glfw3webgpu/cmake_install.cmake")
-endif()
-
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/runner/work/WebGPU4Edu/WebGPU4Edu/firstSteps/build-web/firstSteps/install_local_manifest.txt"
+  file(WRITE "/home/runner/work/WebGPU4Edu/WebGPU4Edu/blueprint/build-web/lighting/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
