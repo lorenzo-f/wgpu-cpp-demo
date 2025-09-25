@@ -6,6 +6,8 @@ struct Light {
   colorIntensity : vec4f,
   /* @offset(32) */
   globalAmbient : vec4f,
+  /* @offset(48) */
+  attenuation : vec4f,
 }
 
 struct Camera {
@@ -44,23 +46,61 @@ var<private> outColor : vec4f;
 
 fn main_1() {
   var N : vec3f;
+  var Lvec : vec3f;
   var L : vec3f;
+  var lenL : f32;
+  var attenuation : f32;
+  var Vvec : vec3f;
   var V : vec3f;
+  var lenV : f32;
+  var Hvec : vec3f;
   var H : vec3f;
+  var lenH : f32;
   var diff : f32;
   var spec : f32;
+  var nh : f32;
   var lightCol : vec3f;
   var ambientCol : vec3f;
   var diffuseCol : vec3f;
   var specularCol : vec3f;
   var finalColor : vec3f;
+  var x_123 : bool;
+  var x_124 : bool;
   N = normalize(vNormal);
-  L = normalize((light.position.xyz - vWorldPos));
-  V = normalize((camera.uCameraPos.xyz - vWorldPos));
-  H = normalize((L + V));
+  Lvec = (light.position.xyz - vWorldPos);
+  L = vec3f();
+  lenL = length(Lvec);
+  if ((lenL > 0.00000099999999747524f)) {
+    L = (Lvec / vec3f(lenL));
+  }
+  attenuation = (1.0f / ((light.attenuation.x + (light.attenuation.y * lenL)) + (light.attenuation.z * (lenL * lenL))));
+  Vvec = (camera.uCameraPos.xyz - vWorldPos);
+  V = vec3f();
+  lenV = length(Vvec);
+  if ((lenV > 0.00000099999999747524f)) {
+    V = (Vvec / vec3f(lenV));
+  }
+  Hvec = (L + V);
+  H = vec3f();
+  lenH = length(Hvec);
+  if ((lenH > 0.00000099999999747524f)) {
+    H = (Hvec / vec3f(lenH));
+  }
   diff = max(dot(N, L), 0.0f);
-  spec = pow(max(dot(N, H), 0.0f), material.shininess);
-  lightCol = (light.colorIntensity.xyz * light.colorIntensity.w);
+  spec = 0.0f;
+  let x_114 = (diff > 0.0f);
+  x_124 = x_114;
+  if (x_114) {
+    x_123 = (material.shininess > 0.0f);
+    x_124 = x_123;
+  }
+  if ((x_124 & (lenH > 0.00000099999999747524f))) {
+    nh = max(dot(N, H), 0.0f);
+    if ((nh > 0.0f)) {
+      spec = pow(nh, material.shininess);
+    }
+  }
+  lightCol = ((light.colorIntensity.xyz * light.colorIntensity.w) * attenuation);
   ambientCol = (material.ambient.xyz * light.globalAmbient.xyz);
   diffuseCol = (material.diffuse.xyz * diff);
   specularCol = (material.specular.xyz * spec);
@@ -82,9 +122,11 @@ fn main(@location(1) vNormal_param : vec3f, @location(0) vWorldPos_param : vec3f
   return main_out(outColor);
 }
 // Converted from GLSL
-struct ModelMatrix {
+struct MeshMatrices {
   /* @offset(0) */
-  uModel : mat4x4f,
+  uModelMat : mat4x4f,
+  /* @offset(64) */
+  uNormalMat : mat4x4f,
 }
 
 struct Camera {
@@ -94,7 +136,7 @@ struct Camera {
   uCameraPos : vec4f,
 }
 
-@group(1) @binding(0) var<uniform> x_13 : ModelMatrix;
+@group(1) @binding(0) var<uniform> matrices : MeshMatrices;
 
 var<private> inPosition : vec3f;
 
@@ -111,12 +153,9 @@ var<private> gl_Position : vec4f;
 fn main_1() {
   var worldPos : vec4f;
   var normalMat : mat3x3f;
-  worldPos = (x_13.uModel * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
-  let x_33 = x_13.uModel;
-  let x_34 = x_33[0u];
-  let x_36 = x_33[1u];
-  let x_38 = x_33[2u];
-  normalMat = transpose(((1.0f / determinant(mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz))) * mat3x3f(vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u]))), vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u]))), vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u]))))));
+  worldPos = (matrices.uModelMat * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
+  let x_34 = matrices.uNormalMat;
+  normalMat = mat3x3f(x_34[0u].xyz, x_34[1u].xyz, x_34[2u].xyz);
   vWorldPos = worldPos.xyz;
   vNormal = normalize((normalMat * inNormal));
   gl_Position = (camera.uViewProj * worldPos);
@@ -140,6 +179,523 @@ fn main(@location(0) inPosition_param : vec3f, @location(1) inNormal_param : vec
   return main_out(vWorldPos, vNormal, gl_Position);
 }
 // Converted from GLSL
+struct Light {
+  /* @offset(0) */
+  position : vec4f,
+  /* @offset(16) */
+  colorIntensity : vec4f,
+  /* @offset(32) */
+  globalAmbient : vec4f,
+  /* @offset(48) */
+  attenuation : vec4f,
+}
+
+struct Camera {
+  /* @offset(0) */
+  uViewProj : mat4x4f,
+  /* @offset(64) */
+  uCameraPos : vec4f,
+}
+
+struct Material {
+  /* @offset(0) */
+  ambient : vec4f,
+  /* @offset(16) */
+  diffuse : vec4f,
+  /* @offset(32) */
+  specular : vec4f,
+  /* @offset(48) */
+  emission : vec4f,
+  /* @offset(64) */
+  x_pad : vec3f,
+  /* @offset(76) */
+  shininess : f32,
+}
+
+var<private> vNormal : vec3f;
+
+@group(0) @binding(1) var<uniform> light : Light;
+
+var<private> vWorldPos : vec3f;
+
+@group(0) @binding(0) var<uniform> camera : Camera;
+
+@group(1) @binding(1) var<uniform> material : Material;
+
+var<private> outColor : vec4f;
+
+fn main_1() {
+  var N : vec3f;
+  var Lvec : vec3f;
+  var L : vec3f;
+  var lenL : f32;
+  var attenuation : f32;
+  var Vvec : vec3f;
+  var V : vec3f;
+  var lenV : f32;
+  var Hvec : vec3f;
+  var H : vec3f;
+  var lenH : f32;
+  var diff : f32;
+  var spec : f32;
+  var nh : f32;
+  var lightCol : vec3f;
+  var ambientCol : vec3f;
+  var diffuseCol : vec3f;
+  var specularCol : vec3f;
+  var finalColor : vec3f;
+  var x_123 : bool;
+  var x_124 : bool;
+  N = normalize(vNormal);
+  Lvec = (light.position.xyz - vWorldPos);
+  L = vec3f();
+  lenL = length(Lvec);
+  if ((lenL > 0.00000099999999747524f)) {
+    L = (Lvec / vec3f(lenL));
+  }
+  attenuation = (1.0f / ((light.attenuation.x + (light.attenuation.y * lenL)) + (light.attenuation.z * (lenL * lenL))));
+  Vvec = (camera.uCameraPos.xyz - vWorldPos);
+  V = vec3f();
+  lenV = length(Vvec);
+  if ((lenV > 0.00000099999999747524f)) {
+    V = (Vvec / vec3f(lenV));
+  }
+  Hvec = (L + V);
+  H = vec3f();
+  lenH = length(Hvec);
+  if ((lenH > 0.00000099999999747524f)) {
+    H = (Hvec / vec3f(lenH));
+  }
+  diff = max(dot(N, L), 0.0f);
+  spec = 0.0f;
+  let x_114 = (diff > 0.0f);
+  x_124 = x_114;
+  if (x_114) {
+    x_123 = (material.shininess > 0.0f);
+    x_124 = x_123;
+  }
+  if ((x_124 & (lenH > 0.00000099999999747524f))) {
+    nh = max(dot(N, H), 0.0f);
+    if ((nh > 0.0f)) {
+      spec = pow(nh, material.shininess);
+    }
+  }
+  lightCol = ((light.colorIntensity.xyz * light.colorIntensity.w) * attenuation);
+  ambientCol = (material.ambient.xyz * light.globalAmbient.xyz);
+  diffuseCol = (material.diffuse.xyz * diff);
+  specularCol = (material.specular.xyz * spec);
+  finalColor = ((material.emission.xyz + ambientCol) + ((diffuseCol + specularCol) * lightCol));
+  outColor = vec4f(finalColor.x, finalColor.y, finalColor.z, 1.0f);
+  return;
+}
+
+struct main_out {
+  @location(0)
+  outColor_1 : vec4f,
+}
+
+@fragment
+fn main(@location(1) @interpolate(flat) vNormal_param : vec3f, @location(0) vWorldPos_param : vec3f) -> main_out {
+  vNormal = vNormal_param;
+  vWorldPos = vWorldPos_param;
+  main_1();
+  return main_out(outColor);
+}
+// Converted from GLSL
+struct MeshMatrices {
+  /* @offset(0) */
+  uModelMat : mat4x4f,
+  /* @offset(64) */
+  uNormalMat : mat4x4f,
+}
+
+struct Camera {
+  /* @offset(0) */
+  uViewProj : mat4x4f,
+  /* @offset(64) */
+  uCameraPos : vec4f,
+}
+
+@group(1) @binding(0) var<uniform> matrices : MeshMatrices;
+
+var<private> inPosition : vec3f;
+
+var<private> vWorldPos : vec3f;
+
+var<private> vNormal : vec3f;
+
+var<private> inNormal : vec3f;
+
+@group(0) @binding(0) var<uniform> camera : Camera;
+
+var<private> gl_Position : vec4f;
+
+fn main_1() {
+  var worldPos : vec4f;
+  var normalMat : mat3x3f;
+  worldPos = (matrices.uModelMat * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
+  let x_34 = matrices.uNormalMat;
+  normalMat = mat3x3f(x_34[0u].xyz, x_34[1u].xyz, x_34[2u].xyz);
+  vWorldPos = worldPos.xyz;
+  vNormal = normalize((normalMat * inNormal));
+  gl_Position = (camera.uViewProj * worldPos);
+  return;
+}
+
+struct main_out {
+  @location(0)
+  vWorldPos_1 : vec3f,
+  @location(1) @interpolate(flat)
+  vNormal_1 : vec3f,
+  @builtin(position)
+  gl_Position : vec4f,
+}
+
+@vertex
+fn main(@location(0) inPosition_param : vec3f, @location(1) inNormal_param : vec3f) -> main_out {
+  inPosition = inPosition_param;
+  inNormal = inNormal_param;
+  main_1();
+  return main_out(vWorldPos, vNormal, gl_Position);
+}
+// Converted from GLSL
+struct MeshMatrices {
+  /* @offset(0) */
+  uModelMat : mat4x4f,
+  /* @offset(64) */
+  uNormalMat : mat4x4f,
+}
+
+struct Light {
+  /* @offset(0) */
+  position : vec4f,
+  /* @offset(16) */
+  colorIntensity : vec4f,
+  /* @offset(32) */
+  globalAmbient : vec4f,
+  /* @offset(48) */
+  attenuation : vec4f,
+}
+
+struct Camera {
+  /* @offset(0) */
+  uViewProj : mat4x4f,
+  /* @offset(64) */
+  uCameraPos : vec4f,
+}
+
+struct Material {
+  /* @offset(0) */
+  ambient : vec4f,
+  /* @offset(16) */
+  diffuse : vec4f,
+  /* @offset(32) */
+  specular : vec4f,
+  /* @offset(48) */
+  emission : vec4f,
+  /* @offset(64) */
+  x_pad : vec3f,
+  /* @offset(76) */
+  shininess : f32,
+}
+
+@group(1) @binding(0) var<uniform> matrices : MeshMatrices;
+
+var<private> inPosition : vec3f;
+
+var<private> inNormal : vec3f;
+
+@group(0) @binding(1) var<uniform> light : Light;
+
+@group(0) @binding(0) var<uniform> camera : Camera;
+
+@group(1) @binding(1) var<uniform> material : Material;
+
+var<private> vColor : vec3f;
+
+var<private> gl_Position : vec4f;
+
+fn main_1() {
+  var worldPos : vec4f;
+  var normalMat : mat3x3f;
+  var vWorldPos : vec3f;
+  var N : vec3f;
+  var Lvec : vec3f;
+  var L : vec3f;
+  var lenL : f32;
+  var attenuation : f32;
+  var Vvec : vec3f;
+  var V : vec3f;
+  var lenV : f32;
+  var Hvec : vec3f;
+  var H : vec3f;
+  var lenH : f32;
+  var diff : f32;
+  var spec : f32;
+  var nh : f32;
+  var lightCol : vec3f;
+  var ambientCol : vec3f;
+  var diffuseCol : vec3f;
+  var specularCol : vec3f;
+  var finalColor : vec3f;
+  var x_154 : bool;
+  var x_155 : bool;
+  worldPos = (matrices.uModelMat * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
+  let x_34 = matrices.uNormalMat;
+  normalMat = mat3x3f(x_34[0u].xyz, x_34[1u].xyz, x_34[2u].xyz);
+  vWorldPos = worldPos.xyz;
+  N = normalize((normalMat * inNormal));
+  Lvec = (light.position.xyz - vWorldPos);
+  L = vec3f();
+  lenL = length(Lvec);
+  if ((lenL > 0.00000099999999747524f)) {
+    L = (Lvec / vec3f(lenL));
+  }
+  attenuation = (1.0f / ((light.attenuation.x + (light.attenuation.y * lenL)) + (light.attenuation.z * (lenL * lenL))));
+  Vvec = (camera.uCameraPos.xyz - vWorldPos);
+  V = vec3f();
+  lenV = length(Vvec);
+  if ((lenV > 0.00000099999999747524f)) {
+    V = (Vvec / vec3f(lenV));
+  }
+  Hvec = (L + V);
+  H = vec3f();
+  lenH = length(Hvec);
+  if ((lenH > 0.00000099999999747524f)) {
+    H = (Hvec / vec3f(lenH));
+  }
+  diff = max(dot(N, L), 0.0f);
+  spec = 0.0f;
+  let x_145 = (diff > 0.0f);
+  x_155 = x_145;
+  if (x_145) {
+    x_154 = (material.shininess > 0.0f);
+    x_155 = x_154;
+  }
+  if ((x_155 & (lenH > 0.00000099999999747524f))) {
+    nh = max(dot(N, H), 0.0f);
+    if ((nh > 0.0f)) {
+      spec = pow(nh, material.shininess);
+    }
+  }
+  lightCol = ((light.colorIntensity.xyz * light.colorIntensity.w) * attenuation);
+  ambientCol = (material.ambient.xyz * light.globalAmbient.xyz);
+  diffuseCol = (material.diffuse.xyz * diff);
+  specularCol = (material.specular.xyz * spec);
+  finalColor = ((material.emission.xyz + ambientCol) + ((diffuseCol + specularCol) * lightCol));
+  vColor = finalColor;
+  gl_Position = (camera.uViewProj * worldPos);
+  return;
+}
+
+struct main_out {
+  @location(0)
+  vColor_1 : vec3f,
+  @builtin(position)
+  gl_Position : vec4f,
+}
+
+@vertex
+fn main(@location(0) inPosition_param : vec3f, @location(1) inNormal_param : vec3f) -> main_out {
+  inPosition = inPosition_param;
+  inNormal = inNormal_param;
+  main_1();
+  return main_out(vColor, gl_Position);
+}
+// Converted from GLSL
+struct MeshMatrices {
+  /* @offset(0) */
+  uModelMat : mat4x4f,
+  /* @offset(64) */
+  uNormalMat : mat4x4f,
+}
+
+struct Light {
+  /* @offset(0) */
+  position : vec4f,
+  /* @offset(16) */
+  colorIntensity : vec4f,
+  /* @offset(32) */
+  globalAmbient : vec4f,
+  /* @offset(48) */
+  attenuation : vec4f,
+}
+
+struct Camera {
+  /* @offset(0) */
+  uViewProj : mat4x4f,
+  /* @offset(64) */
+  uCameraPos : vec4f,
+}
+
+struct Material {
+  /* @offset(0) */
+  ambient : vec4f,
+  /* @offset(16) */
+  diffuse : vec4f,
+  /* @offset(32) */
+  specular : vec4f,
+  /* @offset(48) */
+  emission : vec4f,
+  /* @offset(64) */
+  x_pad : vec3f,
+  /* @offset(76) */
+  shininess : f32,
+}
+
+@group(1) @binding(0) var<uniform> matrices : MeshMatrices;
+
+var<private> inPosition : vec3f;
+
+var<private> inNormal : vec3f;
+
+@group(0) @binding(1) var<uniform> light : Light;
+
+@group(0) @binding(0) var<uniform> camera : Camera;
+
+@group(1) @binding(1) var<uniform> material : Material;
+
+var<private> vColor : vec3f;
+
+var<private> gl_Position : vec4f;
+
+fn main_1() {
+  var worldPos : vec4f;
+  var normalMat : mat3x3f;
+  var vWorldPos : vec3f;
+  var N : vec3f;
+  var Lvec : vec3f;
+  var L : vec3f;
+  var lenL : f32;
+  var attenuation : f32;
+  var Vvec : vec3f;
+  var V : vec3f;
+  var lenV : f32;
+  var Hvec : vec3f;
+  var H : vec3f;
+  var lenH : f32;
+  var diff : f32;
+  var spec : f32;
+  var nh : f32;
+  var lightCol : vec3f;
+  var ambientCol : vec3f;
+  var diffuseCol : vec3f;
+  var specularCol : vec3f;
+  var finalColor : vec3f;
+  var x_154 : bool;
+  var x_155 : bool;
+  worldPos = (matrices.uModelMat * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
+  let x_34 = matrices.uNormalMat;
+  normalMat = mat3x3f(x_34[0u].xyz, x_34[1u].xyz, x_34[2u].xyz);
+  vWorldPos = worldPos.xyz;
+  N = normalize((normalMat * inNormal));
+  Lvec = (light.position.xyz - vWorldPos);
+  L = vec3f();
+  lenL = length(Lvec);
+  if ((lenL > 0.00000099999999747524f)) {
+    L = (Lvec / vec3f(lenL));
+  }
+  attenuation = (1.0f / ((light.attenuation.x + (light.attenuation.y * lenL)) + (light.attenuation.z * (lenL * lenL))));
+  Vvec = (camera.uCameraPos.xyz - vWorldPos);
+  V = vec3f();
+  lenV = length(Vvec);
+  if ((lenV > 0.00000099999999747524f)) {
+    V = (Vvec / vec3f(lenV));
+  }
+  Hvec = (L + V);
+  H = vec3f();
+  lenH = length(Hvec);
+  if ((lenH > 0.00000099999999747524f)) {
+    H = (Hvec / vec3f(lenH));
+  }
+  diff = max(dot(N, L), 0.0f);
+  spec = 0.0f;
+  let x_145 = (diff > 0.0f);
+  x_155 = x_145;
+  if (x_145) {
+    x_154 = (material.shininess > 0.0f);
+    x_155 = x_154;
+  }
+  if ((x_155 & (lenH > 0.00000099999999747524f))) {
+    nh = max(dot(N, H), 0.0f);
+    if ((nh > 0.0f)) {
+      spec = pow(nh, material.shininess);
+    }
+  }
+  lightCol = ((light.colorIntensity.xyz * light.colorIntensity.w) * attenuation);
+  ambientCol = (material.ambient.xyz * light.globalAmbient.xyz);
+  diffuseCol = (material.diffuse.xyz * diff);
+  specularCol = (material.specular.xyz * spec);
+  finalColor = ((material.emission.xyz + ambientCol) + ((diffuseCol + specularCol) * lightCol));
+  vColor = finalColor;
+  gl_Position = (camera.uViewProj * worldPos);
+  return;
+}
+
+struct main_out {
+  @location(0) @interpolate(flat)
+  vColor_1 : vec3f,
+  @builtin(position)
+  gl_Position : vec4f,
+}
+
+@vertex
+fn main(@location(0) inPosition_param : vec3f, @location(1) inNormal_param : vec3f) -> main_out {
+  inPosition = inPosition_param;
+  inNormal = inNormal_param;
+  main_1();
+  return main_out(vColor, gl_Position);
+}
+// Converted from GLSL
+var<private> outColor : vec4f;
+
+var<private> vColor : vec3f;
+
+fn main_1() {
+  outColor = vec4f(vColor.x, vColor.y, vColor.z, 1.0f);
+  return;
+}
+
+struct main_out {
+  @location(0)
+  outColor_1 : vec4f,
+}
+
+@fragment
+fn main(@location(0) vColor_param : vec3f) -> main_out {
+  vColor = vColor_param;
+  main_1();
+  return main_out(outColor);
+}
+// Converted from GLSL
+var<private> outColor : vec4f;
+
+var<private> vColor : vec3f;
+
+fn main_1() {
+  outColor = vec4f(vColor.x, vColor.y, vColor.z, 1.0f);
+  return;
+}
+
+struct main_out {
+  @location(0)
+  outColor_1 : vec4f,
+}
+
+@fragment
+fn main(@location(0) @interpolate(flat) vColor_param : vec3f) -> main_out {
+  vColor = vColor_param;
+  main_1();
+  return main_out(outColor);
+}
+// Converted from GLSL
+struct MeshMatrices {
+  /* @offset(0) */
+  uModelMat : mat4x4f,
+  /* @offset(64) */
+  uNormalMat : mat4x4f,
+}
+
 struct Material {
   /* @offset(0) */
   ambient : vec4f,
@@ -162,101 +718,41 @@ struct Camera {
   uCameraPos : vec4f,
 }
 
-struct Light {
-  /* @offset(0) */
-  position : vec4f,
-  /* @offset(16) */
-  colorIntensity : vec4f,
-  /* @offset(32) */
-  globalAmbient : vec4f,
-}
-
-var<private> outColor : vec4f;
-
-@group(1) @binding(1) var<uniform> material : Material;
-
-var<private> vWorldPos : vec3f;
-
-var<private> vNormal : vec3f;
-
-@group(0) @binding(0) var<uniform> camera : Camera;
-
-@group(0) @binding(1) var<uniform> light : Light;
-
-fn main_1() {
-  outColor = material.diffuse;
-  return;
-}
-
-struct main_out {
-  @location(0)
-  outColor_1 : vec4f,
-}
-
-@fragment
-fn main(@location(0) vWorldPos_param : vec3f, @location(1) vNormal_param : vec3f) -> main_out {
-  vWorldPos = vWorldPos_param;
-  vNormal = vNormal_param;
-  main_1();
-  return main_out(outColor);
-}
-// Converted from GLSL
-struct ModelMatrix {
-  /* @offset(0) */
-  uModel : mat4x4f,
-}
-
-struct Camera {
-  /* @offset(0) */
-  uViewProj : mat4x4f,
-  /* @offset(64) */
-  uCameraPos : vec4f,
-}
-
-@group(1) @binding(0) var<uniform> x_13 : ModelMatrix;
+@group(1) @binding(0) var<uniform> matrices : MeshMatrices;
 
 var<private> inPosition : vec3f;
 
-var<private> vWorldPos : vec3f;
+var<private> vColor : vec3f;
 
-var<private> vNormal : vec3f;
-
-var<private> inNormal : vec3f;
+@group(1) @binding(1) var<uniform> material : Material;
 
 @group(0) @binding(0) var<uniform> camera : Camera;
+
+var<private> inColor : vec3f;
 
 var<private> gl_Position : vec4f;
 
 fn main_1() {
   var worldPos : vec4f;
-  var normalMat : mat3x3f;
-  worldPos = (x_13.uModel * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
-  let x_33 = x_13.uModel;
-  let x_34 = x_33[0u];
-  let x_36 = x_33[1u];
-  let x_38 = x_33[2u];
-  normalMat = transpose(((1.0f / determinant(mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz))) * mat3x3f(vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u]))), vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][2u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][2u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][2u]))), vec3f(((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][0u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[2u][1u])), ((mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][0u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][1u]) - (mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[0u][1u] * mat3x3f(x_34.xyz, x_36.xyz, x_38.xyz)[1u][0u]))))));
-  vWorldPos = worldPos.xyz;
-  vNormal = normalize((normalMat * inNormal));
+  worldPos = (matrices.uModelMat * vec4f(inPosition.x, inPosition.y, inPosition.z, 1.0f));
+  vColor = material.diffuse.xyz;
   gl_Position = (camera.uViewProj * worldPos);
   return;
 }
 
 struct main_out {
-  @location(0)
-  vWorldPos_1 : vec3f,
-  @location(1)
-  vNormal_1 : vec3f,
+  @location(0) @interpolate(flat)
+  vColor_1 : vec3f,
   @builtin(position)
   gl_Position : vec4f,
 }
 
 @vertex
-fn main(@location(0) inPosition_param : vec3f, @location(1) inNormal_param : vec3f) -> main_out {
+fn main(@location(0) inPosition_param : vec3f, @location(1) inColor_param : vec3f) -> main_out {
   inPosition = inPosition_param;
-  inNormal = inNormal_param;
+  inColor = inColor_param;
   main_1();
-  return main_out(vWorldPos, vNormal, gl_Position);
+  return main_out(vColor, gl_Position);
 }
 [points]
 # x   y      r   g   b
